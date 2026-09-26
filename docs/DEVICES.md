@@ -32,7 +32,7 @@ from 🟡 `Recommended` in the table below, and it follows from the GPU family:
 
 Two things that vary with API level rather than hardware:
 
-- **Always-on VPN is API 24+.** The [reboot gap](STATUS.md#reboot-behaviour) is a property
+- **Always-on VPN is API 24+.** The [API 22 boot receiver](STATUS.md#reboot-behaviour) addresses a property
   of API 22–23, not of this build — on an API 24/25 device upstream's own mechanism should
   be available. Untested.
 - **RAM.** Verified at 895 MB. Sub-512 MB devices are untested.

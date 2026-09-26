@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+Subject: [PATCH] Start the VPN after boot on API 22
+
+Android's always-on VPN support is only available from API 24. Register for
+BOOT_COMPLETED on older devices and reuse the existing StartVPNWorker, which
+checks both saved readiness and VpnService permission before starting.
+---
+ android/src/main/AndroidManifest.xml                       | 2 ++
+ android/src/main/java/com/tailscale/ipn/IPNReceiver.java | 3 ++-
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/android/src/main/AndroidManifest.xml b/android/src/main/AndroidManifest.xml
+index 337bcf2..3e3661f 100644
+--- a/android/src/main/AndroidManifest.xml
++++ b/android/src/main/AndroidManifest.xml
+@@ -6,5 +6,6 @@
+     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+     <uses-permission android:name="android.permission.INTERNET" />
++    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+     <uses-permission
+         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+         android:maxSdkVersion="29" />
+@@ -87,5 +88,6 @@
+             android:exported="true">
+             <intent-filter>
++                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                 <action android:name="com.tailscale.ipn.CONNECT_VPN" />
+                 <action android:name="com.tailscale.ipn.DISCONNECT_VPN" />
+                 <action android:name="com.tailscale.ipn.USE_EXIT_NODE" />
+diff --git a/android/src/main/java/com/tailscale/ipn/IPNReceiver.java b/android/src/main/java/com/tailscale/ipn/IPNReceiver.java
+index 849199b..c911381 100644
+--- a/android/src/main/java/com/tailscale/ipn/IPNReceiver.java
++++ b/android/src/main/java/com/tailscale/ipn/IPNReceiver.java
+@@ -33,7 +33,8 @@ public class IPNReceiver extends BroadcastReceiver {
+         final WorkManager workManager = WorkManager.getInstance(context);
+         final String action = intent.getAction();
+ 
+-        if (Objects.equals(action, INTENT_CONNECT_VPN)) {
++        if (Objects.equals(action, INTENT_CONNECT_VPN)
++                || Objects.equals(action, Intent.ACTION_BOOT_COMPLETED)) {
+             OneTimeWorkRequest req =
+                     new OneTimeWorkRequest.Builder(StartVPNWorker.class)
+                             // setExpedited removed: below API 31 WorkManager runs expedited
+-- 
+2.51.0

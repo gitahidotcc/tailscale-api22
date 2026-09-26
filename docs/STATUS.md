@@ -1,9 +1,9 @@
 # Status — WORKING
 
-Last updated 2026-07-26.
+Last updated 2026-09-27.
 
-Tailscale **1.98.8** (current stable) runs on **Fire OS 5 / Android 5.1 / API 22** with
-seven patches, and **routes traffic through an exit node**.
+Tailscale **1.98.8** runs on **Fire OS 5 / Android 5.1 / API 22** with eight patches,
+**routes traffic through an exit node**, and starts the VPN after reboot.
 
 ---
 
@@ -24,7 +24,7 @@ On a Fire TV Stick 2nd gen (`AFTT`, Fire OS 5.2.9.5, Mali-450 / GLES 2.0):
 | Peer list | ✅ `Peers=6`, grouped by user |
 | **Exit node** | ✅ **`exit-node-host.othernet.ts.net`** |
 | **Traffic through exit node** | ✅ **1 MB download → 1,113,884 bytes over `tun0`** |
-| Survives reboot | ❌ VPN does not auto-start — see below |
+| Survives reboot | ✅ `BOOT_COMPLETED` starts the saved VPN profile |
 
 > [!TIP]
 > **Measuring exit-node routing:** public egress IP is an unreliable check — if the exit
@@ -40,18 +40,29 @@ On a Fire TV Stick 2nd gen (`AFTT`, Fire OS 5.2.9.5, Mali-450 / GLES 2.0):
 
 ## Reboot behaviour
 
-**The VPN does not come up by itself after a reboot.** The app process is started (by
-WorkManager's `RescheduleReceiver`) but no tunnel is established.
+Upstream relies on Android's **always-on VPN**, which is API 24+ and unavailable on API 22.
+Patch `0008` adds a `BOOT_COMPLETED` action to the existing `IPNReceiver` and grants
+`RECEIVE_BOOT_COMPLETED`. It reuses `StartVPNWorker`, so startup still requires a saved,
+ready profile and previously granted `VpnService` permission; it does not bypass Android
+consent or store another credential.
 
-This is upstream behaviour, not a patch gap: Tailscale's Android manifest declares **no
-`BOOT_COMPLETED` receiver** — the `RECEIVE_BOOT_COMPLETED` permission comes from
-WorkManager. Upstream relies on Android's **always-on VPN**, which is API 24+ and
-unavailable here (`settings get secure always_on_vpn_app` returns `null` on Fire OS 5).
+Verified on a ZK-R31A station running Android 5.1.1/API 22: 38 seconds after a cold boot,
+`com.tailscale.ipn` was running, `IPNService` was a sticky foreground service, `tun0` owned
+`100.109.154.78/32`, and four tailnet pings completed with 0% packet loss. The Tailscale UI
+did not need to be opened.
 
-> [!TIP]
-> **Workaround:** open the Tailscale app once after a reboot. Everything else persists —
-> login, chosen exit node, prefs. Verified: after a cold boot, launching the app restored
-> the tunnel and exit-node routing (1,116,625 bytes over `tun0`) with no reconfiguration.
+> [!NOTE]
+> The station's Android 5 `adbd` accepts only one active transport. If the workstation is
+> already attached to `<LAN-IP>:5555`, a second connection to the Tailscale IP can remain
+> `offline`. Disconnect the LAN transport first, then connect through Tailscale:
+>
+> ```sh
+> adb disconnect 192.168.8.13:5555
+> adb connect 100.109.154.78:5555
+> ```
+>
+> Verified after the autostart reboot: Tailscale ADB reported `device` and executed shell
+> commands normally.
 
 ## Build
 
@@ -62,7 +73,7 @@ TS_REF=1.98.8-t1241b225b-gbcbaf1889 MIN_SDK=22 ./scripts/build.sh
 ~12 s incremental, a few minutes cold. Patches apply automatically; the build hard-fails
 if any does not.
 
-## The seven patches
+## The eight patches
 
 | # | Fixes | API |
 |---|---|---|
@@ -73,6 +84,7 @@ if any does not.
 | 0005 | netmap decode: `decodeFromString`, not `decodeFromStream` | ≤23 |
 | 0006 | drop `setExpedited` from `IPNReceiver` work requests | 31 |
 | 0007 | `coreLibraryDesugaring` for `java.time` | 26 |
+| 0008 | start the saved VPN profile on `BOOT_COMPLETED` | 22 |
 
 Upstream runs at minSdk 26, so guards that became dead code were dropped over time. All of
 these are that, **except 0005** — not a missing guard, but a platform bug Google fixed at

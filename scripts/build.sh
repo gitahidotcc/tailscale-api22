@@ -17,9 +17,9 @@ set -euo pipefail
 
 # ---- pinned inputs ----------------------------------------------------------
 TS_REPO="https://github.com/tailscale/tailscale-android.git"
-# 1.64.0 — earliest release with a complete Compose UI (settings, exit-node picker).
-# The earlier 3926cf4b56 renders but its screens are stubs; see docs/FINDINGS.md.
-TS_REF="${TS_REF:-1.64.0-t78dc8622d-gfd2ca6fa940}"
+# 1.98.8 — newest release covered by the repository's tested API 22 patch set.
+# Older supported refs may still be selected explicitly; see docs/BUILD.md.
+TS_REF="${TS_REF:-1.98.8-t1241b225b-gbcbaf1889}"
 NDK_VERSION="${NDK_VERSION:-23.1.7779620}"
 
 # ---- tunables ---------------------------------------------------------------
