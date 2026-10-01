@@ -217,3 +217,20 @@ Every avenue was checked and closed — details and evidence in [FINDINGS.md](FI
 
 No release has ever paired the Compose UI with minSdk 22. That is the entire reason this
 repo compiles from source.
+
+## Firmware with IPv6 disabled
+
+Patch `0009` reads `/proc/sys/net/ipv6/conf/default/disable_ipv6` once per VPN
+builder. When it is `1`, IPv6 addresses, routes (including exclusions), and DNS
+servers are omitted so Android can establish an IPv4-only tunnel. IPv6 remains
+blocked by the VPN; the patch does not allow it to bypass an exit node. Devices
+with IPv6 enabled keep the upstream dual-stack configuration. If the setting
+cannot be read, upstream behavior is retained. IPv6-only peers, subnet routes,
+and DNS servers are unavailable in fallback mode. No root access is needed by
+the app, and the patch does not modify device settings.
+
+Build for ARM64:
+
+```sh
+GOMOBILE_TARGET=android/arm64 TS_ARCH=arm64 ./scripts/build.sh
+```

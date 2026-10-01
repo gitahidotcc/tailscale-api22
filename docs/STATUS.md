@@ -73,7 +73,7 @@ TS_REF=1.98.8-t1241b225b-gbcbaf1889 MIN_SDK=22 ./scripts/build.sh
 ~12 s incremental, a few minutes cold. Patches apply automatically; the build hard-fails
 if any does not.
 
-## The eight patches
+## Patches
 
 | # | Fixes | API |
 |---|---|---|
@@ -85,6 +85,7 @@ if any does not.
 | 0006 | drop `setExpedited` from `IPNReceiver` work requests | 31 |
 | 0007 | `coreLibraryDesugaring` for `java.time` | 26 |
 | 0008 | start the saved VPN profile on `BOOT_COMPLETED` | 22 |
+| 0009 | IPv4-only VPN when firmware disables IPv6 for new interfaces | all |
 
 Upstream runs at minSdk 26, so guards that became dead code were dropped over time. All of
 these are that, **except 0005** — not a missing guard, but a platform bug Google fixed at
@@ -231,3 +232,14 @@ Everything needed works. Optional polish:
 1. `NetworkChangeCallback` never fires on API 22, so `protect()` pins to nothing. Equivalent
    on a single-uplink device; would matter on multi-uplink.
 2. Launch is slow, 5-7 s to first frame, on this hardware.
+
+## Android 11 ARM64 IPv4 fallback verification
+
+On 2026-10-01, patched 1.98.8 was rebuilt for `android/arm64` and installed
+on an `rk3566_r` device (API 30). With both `all/disable_ipv6` and
+`default/disable_ipv6` set to `1`, patch 0009 logged its IPv4-only fallback.
+Android reported the VPN CONNECTED and `tun0` remained up with
+`100.98.156.84/32` and no IPv6 address. The previous dual-stack build failed
+with `Cannot add address: fd7a:…: Permission denied`. This verifies tunnel
+establishment; peer traffic, exit-node routing, and reboot behavior of the
+new patch have not yet been tested. See BUILD.md for fallback limitations.
