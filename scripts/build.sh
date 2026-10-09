@@ -125,6 +125,9 @@ info "HEAD: $(git -C "$SRC" rev-parse HEAD)"
 
 # Reset to pristine sources so overrides and patches apply cleanly on re-runs.
 git -C "$SRC" checkout -q -- . 2>/dev/null || true
+# Patch 0010 adds this generated source, which checkout does not remove.
+# Remove only that known patch output so repeat builds can apply it cleanly.
+rm -f "$SRC/android/src/main/java/androidx/security/crypto/SoftwareEncryptedPreferences.java"
 
 # ---- 3b. per-ref patches ----------------------------------------------------
 # Upstream runs at minSdk 26, so API-guard rot accumulates: calls to APIs newer
